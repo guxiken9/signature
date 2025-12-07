@@ -5,13 +5,22 @@ class Signature {
     if (!this.canvas || !this.backgroundCanvas) {
       throw new Error('Canvas elements not found');
     }
-    this.ctx = this.canvas.getContext('2d');
-    this.bgCtx = this.backgroundCanvas.getContext('2d');
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: false });
+    this.bgCtx = this.backgroundCanvas.getContext('2d', { willReadFrequently: false });
+
+    if (!this.ctx || !this.bgCtx) {
+      throw new Error('Failed to get canvas 2D context. Canvas may not be supported.');
+    }
+
     this.options = Object.assign({
       strokeColor: '#000000',
       strokeThickness: 2,
       throttleIntervalMs: 8,
-      dpi: 96
+      dpi: 96,
+      maxCanvasWidth: 1200,
+      maxCanvasHeight: 800,
+      minCanvasWidth: 200,
+      minCanvasHeight: 100
     }, options);
     this.strokes = [];
     this.isCapturing = false;
@@ -27,7 +36,7 @@ class Signature {
 
   startCapture() {
     if (!window.PointerEvent) {
-      return { code: 'UNSUPPORTED_ENV', message: 'Pointer events not available' };
+      return this.startCaptureFallback();
     }
     if (this.isCapturing) {
       return;
@@ -39,26 +48,81 @@ class Signature {
     this.isCapturing = true;
   }
 
+  startCaptureFallback() {
+    if (this.isCapturing) {
+      return;
+    }
+    const mouseDownHandler = (e) => this.handlePointerDown({ clientX: e.clientX, clientY: e.clientY, pointerId: 1, preventDefault: () => e.preventDefault() });
+    const mouseMoveHandler = (e) => this.handlePointerMove({ clientX: e.clientX, clientY: e.clientY, pointerId: 1 });
+    const mouseUpHandler = (e) => this.handlePointerUp({ clientX: e.clientX, clientY: e.clientY, pointerId: 1 });
+    const touchStartHandler = (e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        this.handlePointerDown({ clientX: touch.clientX, clientY: touch.clientY, pointerId: touch.identifier, preventDefault: () => e.preventDefault() });
+      }
+    };
+    const touchMoveHandler = (e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        this.handlePointerMove({ clientX: touch.clientX, clientY: touch.clientY, pointerId: touch.identifier });
+      }
+    };
+    const touchEndHandler = (e) => {
+      if (e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        this.handlePointerUp({ clientX: touch.clientX, clientY: touch.clientY, pointerId: touch.identifier });
+      }
+    };
+
+    this.fallbackHandlers = { mouseDownHandler, mouseMoveHandler, mouseUpHandler, touchStartHandler, touchMoveHandler, touchEndHandler };
+    this.canvas.addEventListener('mousedown', mouseDownHandler);
+    this.canvas.addEventListener('mousemove', mouseMoveHandler);
+    window.addEventListener('mouseup', mouseUpHandler);
+    this.canvas.addEventListener('touchstart', touchStartHandler, { passive: false });
+    this.canvas.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    this.canvas.addEventListener('touchend', touchEndHandler, { passive: false });
+    this.isCapturing = true;
+    this.usingFallback = true;
+  }
+
   stopCapture() {
     if (!this.isCapturing) {
       return;
     }
-    this.canvas.removeEventListener('pointerdown', this.pointerDownHandler);
-    this.canvas.removeEventListener('pointermove', this.pointerMoveHandler);
-    window.removeEventListener('pointerup', this.pointerUpHandler);
+    if (this.usingFallback && this.fallbackHandlers) {
+      this.canvas.removeEventListener('mousedown', this.fallbackHandlers.mouseDownHandler);
+      this.canvas.removeEventListener('mousemove', this.fallbackHandlers.mouseMoveHandler);
+      window.removeEventListener('mouseup', this.fallbackHandlers.mouseUpHandler);
+      this.canvas.removeEventListener('touchstart', this.fallbackHandlers.touchStartHandler);
+      this.canvas.removeEventListener('touchmove', this.fallbackHandlers.touchMoveHandler);
+      this.canvas.removeEventListener('touchend', this.fallbackHandlers.touchEndHandler);
+      this.fallbackHandlers = null;
+      this.usingFallback = false;
+    } else {
+      this.canvas.removeEventListener('pointerdown', this.pointerDownHandler);
+      this.canvas.removeEventListener('pointermove', this.pointerMoveHandler);
+      window.removeEventListener('pointerup', this.pointerUpHandler);
+    }
     this.canvas.style.touchAction = '';
     this.isCapturing = false;
   }
 
   resize(width, height) {
+    const validatedWidth = Math.max(this.options.minCanvasWidth, Math.min(this.options.maxCanvasWidth, width));
+    const validatedHeight = Math.max(this.options.minCanvasHeight, Math.min(this.options.maxCanvasHeight, height));
+
+    if (validatedWidth !== width || validatedHeight !== height) {
+      console.warn(`Canvas size clamped to ${validatedWidth}x${validatedHeight} (requested: ${width}x${height})`);
+    }
+
     const strokes = this.getStrokeData();
-    this.canvas.width = width;
-    this.canvas.height = height;
-    this.backgroundCanvas.width = width;
-    this.backgroundCanvas.height = height;
+    this.canvas.width = validatedWidth;
+    this.canvas.height = validatedHeight;
+    this.backgroundCanvas.width = validatedWidth;
+    this.backgroundCanvas.height = validatedHeight;
     this.renderBackground();
     if (strokes.strokes.length) {
-      const normalized = this.normalizeStrokes(strokes, width, height);
+      const normalized = this.normalizeStrokes(strokes, validatedWidth, validatedHeight);
       this.strokes = normalized.strokes;
       this.redrawStrokes();
       this.emit('onClear', 'resize');
@@ -121,8 +185,16 @@ class Signature {
   }
 
   handlePointerDown(event) {
-    event.preventDefault();
-    this.canvas.setPointerCapture(event.pointerId);
+    if (event.preventDefault) {
+      event.preventDefault();
+    }
+    if (this.canvas.setPointerCapture && event.pointerId !== undefined) {
+      try {
+        this.canvas.setPointerCapture(event.pointerId);
+      } catch (e) {
+        console.warn('Failed to set pointer capture:', e);
+      }
+    }
     this.activeStroke = {
       id: `stroke-${Date.now()}`,
       color: this.options.strokeColor,
@@ -149,7 +221,13 @@ class Signature {
     if (!this.activeStroke) {
       return;
     }
-    this.canvas.releasePointerCapture(event.pointerId);
+    if (this.canvas.releasePointerCapture && event.pointerId !== undefined) {
+      try {
+        this.canvas.releasePointerCapture(event.pointerId);
+      } catch (e) {
+        console.warn('Failed to release pointer capture:', e);
+      }
+    }
     this.addPoint(event);
     this.strokes.push(this.activeStroke);
     this.emit('onStrokeEnd', this.activeStroke);

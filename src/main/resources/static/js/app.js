@@ -132,6 +132,12 @@ copyJsonBtn.addEventListener('click', () => {
 });
 
 sendBtn.addEventListener('click', async () => {
+  if (sign.getStrokeCount() === 0) {
+    statusEl.textContent = 'エラー: 署名が入力されていません';
+    statusEl.style.color = '#ef4444';
+    return;
+  }
+
   const metadata = sign.getStrokeData();
   const canvas = document.getElementById('canvas');
   const bgCanvas = document.getElementById('canvasBg');
@@ -141,6 +147,12 @@ sendBtn.addEventListener('click', async () => {
   tempCanvas.width = canvas.width;
   tempCanvas.height = canvas.height;
   const tempCtx = tempCanvas.getContext('2d');
+
+  if (!tempCtx) {
+    statusEl.textContent = 'エラー: Canvasコンテキストの取得に失敗しました';
+    statusEl.style.color = '#ef4444';
+    return;
+  }
 
   // 背景を描画
   tempCtx.drawImage(bgCanvas, 0, 0);
@@ -160,27 +172,48 @@ sendBtn.addEventListener('click', async () => {
     }
   };
 
-  try {
-    statusEl.textContent = '送信中...';
-    statusEl.style.color = '#3b82f6';
+  const maxRetries = 3;
+  let attempt = 0;
 
-    const response = await fetch('/api/signatures', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+  while (attempt < maxRetries) {
+    try {
+      statusEl.textContent = attempt === 0 ? '送信中...' : `再送信中 (${attempt + 1}/${maxRetries})...`;
+      statusEl.style.color = '#3b82f6';
+      sendBtn.disabled = true;
 
-    const data = await response.json();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Request failed');
+      const response = await fetch('/api/signatures', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      statusEl.textContent = `送信成功 - fileId: ${data.fileId}, サイズ: ${data.sizeBytes} bytes (${data.width}x${data.height})`;
+      statusEl.style.color = '#10b981';
+      sendBtn.disabled = false;
+      return;
+    } catch (err) {
+      attempt++;
+      if (attempt >= maxRetries || err.name === 'AbortError') {
+        const errorMsg = err.name === 'AbortError' ? 'タイムアウト: サーバーからの応答がありません' : err.message;
+        statusEl.textContent = `送信エラー: ${errorMsg}`;
+        statusEl.style.color = '#ef4444';
+        sendBtn.disabled = false;
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
-
-    statusEl.textContent = `送信成功 - fileId: ${data.fileId}, サイズ: ${data.sizeBytes} bytes`;
-    statusEl.style.color = '#10b981';
-  } catch (err) {
-    statusEl.textContent = `送信エラー: ${err.message}`;
-    statusEl.style.color = '#ef4444';
   }
 });
 

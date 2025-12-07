@@ -21,7 +21,10 @@
 
   <!-- Security -->
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <title>署名パッドサンプル - Signature.js デモ</title>
   <link rel="stylesheet" href="/css/styles.css">
@@ -46,11 +49,11 @@
           <canvas id="canvas" width="600" height="300"></canvas>
         </div>
 
-        <div class="button-group">
-          <button id="startBtn" class="btn btn-primary">キャプチャ開始</button>
-          <button id="stopBtn" class="btn btn-secondary">キャプチャ停止</button>
-          <button id="undoBtn" class="btn btn-secondary">取り消し</button>
-          <button id="clearBtn" class="btn btn-secondary">クリア</button>
+        <div class="button-group" role="group" aria-label="署名キャプチャ操作">
+          <button id="startBtn" class="btn btn-primary" aria-label="署名キャプチャを開始">キャプチャ開始</button>
+          <button id="stopBtn" class="btn btn-secondary" aria-label="署名キャプチャを停止">キャプチャ停止</button>
+          <button id="undoBtn" class="btn btn-secondary" aria-label="最後のストロークを取り消し">取り消し</button>
+          <button id="clearBtn" class="btn btn-secondary" aria-label="すべての署名をクリア">クリア</button>
         </div>
 
         <div class="info-panel">
@@ -114,11 +117,11 @@
   "strokes": []
 }</pre>
         </div>
-        <div class="button-group">
-          <button id="copyJsonBtn" class="btn btn-secondary">JSONをコピー</button>
-          <button id="sendBtn" class="btn btn-primary">APIに送信</button>
+        <div class="button-group" role="group" aria-label="データ操作">
+          <button id="copyJsonBtn" class="btn btn-secondary" aria-label="署名データのJSONをクリップボードにコピー">JSONをコピー</button>
+          <button id="sendBtn" class="btn btn-primary" aria-label="署名データをAPIに送信">APIに送信</button>
         </div>
-        <div id="status" class="status-message"></div>
+        <div id="status" class="status-message" role="status" aria-live="polite" aria-atomic="true"></div>
       </section>
     </main>
 
