@@ -1,5 +1,8 @@
 package com.example.signature.spring.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 import java.util.Objects;
 
@@ -9,7 +12,12 @@ public class ApiError {
     private final String code;
     private final String message;
 
-    public ApiError(Date timestamp, int status, String code, String message) {
+    @JsonCreator
+    public ApiError(
+            @JsonProperty("timestamp") Date timestamp,
+            @JsonProperty("status") int status,
+            @JsonProperty("code") String code,
+            @JsonProperty("message") String message) {
         this.timestamp = timestamp;
         this.status = status;
         this.code = code;

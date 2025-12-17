@@ -1,5 +1,8 @@
 package com.example.signature.spring.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.validation.constraints.Min;
 import java.util.Objects;
 
@@ -14,8 +17,13 @@ public class SignatureOptionsDto {
     @Min(1)
     private final Integer height;
 
-    public SignatureOptionsDto(String outputFormat, String backgroundColor, Boolean trimTransparent,
-                              Integer width, Integer height) {
+    @JsonCreator
+    public SignatureOptionsDto(
+            @JsonProperty("outputFormat") String outputFormat,
+            @JsonProperty("backgroundColor") String backgroundColor,
+            @JsonProperty("trimTransparent") Boolean trimTransparent,
+            @JsonProperty("width") Integer width,
+            @JsonProperty("height") Integer height) {
         this.outputFormat = outputFormat;
         this.backgroundColor = backgroundColor;
         this.trimTransparent = trimTransparent;

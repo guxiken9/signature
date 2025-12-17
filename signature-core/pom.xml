@@ -15,6 +15,13 @@
   <description>Pure Java library for signature image processing (Spring-independent)</description>
 
   <dependencies>
+    <!-- Optional Jackson annotations for JSON serialization/deserialization -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Test Dependencies -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

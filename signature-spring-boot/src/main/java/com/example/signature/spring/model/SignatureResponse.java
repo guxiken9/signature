@@ -1,6 +1,8 @@
 package com.example.signature.spring.model;
 
 import com.example.signature.core.model.ConversionResult;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
@@ -11,7 +13,13 @@ public class SignatureResponse {
     private final int width;
     private final int height;
 
-    public SignatureResponse(String fileId, String contentType, long sizeBytes, int width, int height) {
+    @JsonCreator
+    public SignatureResponse(
+            @JsonProperty("fileId") String fileId,
+            @JsonProperty("contentType") String contentType,
+            @JsonProperty("sizeBytes") long sizeBytes,
+            @JsonProperty("width") int width,
+            @JsonProperty("height") int height) {
         this.fileId = fileId;
         this.contentType = contentType;
         this.sizeBytes = sizeBytes;

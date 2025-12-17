@@ -3,6 +3,8 @@ package com.example.signature.spring.model;
 import com.example.signature.core.model.SignatureMetadata;
 import com.example.signature.core.model.SignatureOptions;
 import com.example.signature.core.model.SignatureRequest;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -20,7 +22,12 @@ public class SignatureRequestDto {
     @Valid
     private final SignatureOptionsDto options;
 
-    public SignatureRequestDto(String mime, String data, SignatureMetadata metadata, SignatureOptionsDto options) {
+    @JsonCreator
+    public SignatureRequestDto(
+            @JsonProperty("mime") String mime,
+            @JsonProperty("data") String data,
+            @JsonProperty("metadata") SignatureMetadata metadata,
+            @JsonProperty("options") SignatureOptionsDto options) {
         this.mime = mime;
         this.data = data;
         this.metadata = metadata;

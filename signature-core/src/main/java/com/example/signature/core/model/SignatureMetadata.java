@@ -1,5 +1,8 @@
 package com.example.signature.core.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 public class SignatureMetadata {
@@ -9,7 +12,13 @@ public class SignatureMetadata {
     private final Integer strokeCount;
     private final Long durationMs;
 
-    public SignatureMetadata(Integer width, Integer height, Integer dpi, Integer strokeCount, Long durationMs) {
+    @JsonCreator
+    public SignatureMetadata(
+            @JsonProperty("width") Integer width,
+            @JsonProperty("height") Integer height,
+            @JsonProperty("dpi") Integer dpi,
+            @JsonProperty("strokeCount") Integer strokeCount,
+            @JsonProperty("durationMs") Long durationMs) {
         this.width = width;
         this.height = height;
         this.dpi = dpi;
