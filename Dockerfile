@@ -1,7 +1,7 @@
 # Multi-stage build for optimized image size
 
 # Stage 1: Build stage
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM maven:3.9-eclipse-temurin-8 AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ COPY signature-app/src signature-app/src
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime stage
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:8-jre-jammy
 
 # Install curl for healthcheck
 RUN apt-get update && \

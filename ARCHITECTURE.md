@@ -100,7 +100,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 
 **役割**: データ構造の定義
 
-すべてのモデルクラスはJava Recordを使用してイミュータブルに実装されています。
+すべてのモデルクラスはイミュータブルなPOJOとして実装されています（Java 8互換性のため）。
 
 #### SignatureRequest
 - **場所**: [signature-core/src/main/java/com/example/signature/core/model/SignatureRequest.java](signature-core/src/main/java/com/example/signature/core/model/SignatureRequest.java)
@@ -237,8 +237,8 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 - 疎結合な設計
 
 ### 3. イミュータビリティ
-- Record使用によるイミュータブルなモデル
-- スレッドセーフな実装
+- イミュータブルなPOJO使用によるスレッドセーフな設計
+- final フィールドの使用
 - 副作用のない処理
 
 ### 4. エラーハンドリング
@@ -263,15 +263,17 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 - 高度な画像処理には不向き
 - パフォーマンスは中程度
 
-### Record の使用
+### イミュータブルなPOJO の使用
 
 **理由**:
-- ボイラープレートコード削減
-- イミュータビリティの強制
-- equals/hashCode/toString の自動生成
+- Java 8互換性の確保
+- イミュータビリティの実現
+- スレッドセーフな設計
 
-**要件**:
-- Java 17以上
+**実装方針**:
+- すべてのフィールドをfinalで宣言
+- 明示的なコンストラクタ、getter、equals、hashCode、toStringの実装
+- セッター（mutator）を提供しない
 
 ### Base64 Data URL 対応
 
@@ -293,6 +295,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 ### スレッドセーフティ
 - Serviceクラスはステートレスでスレッドセーフ
 - イミュータブルなモデルクラス
+- SimpleDateFormatはThreadLocalで管理（スレッドセーフティ確保）
 - Spring Beanのシングルトンスコープでも安全
 
 ### スケーラビリティ
@@ -302,7 +305,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 ## セキュリティ考慮事項
 
 ### 入力検証
-- Jakarta Validation による型安全なバリデーション
+- Bean Validation (javax.validation) による型安全なバリデーション
 - ペイロードサイズ制限（DoS対策）
 - Base64デコード失敗時の適切なエラーハンドリング
 

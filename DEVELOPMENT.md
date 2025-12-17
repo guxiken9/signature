@@ -6,7 +6,7 @@
 
 | ツール | バージョン | 説明 |
 |--------|-----------|------|
-| Java | 17以上 | OpenJDK推奨 |
+| Java | 8以上 | OpenJDK推奨 |
 | Maven | 3.6以上 | ビルドツール |
 | Git | 任意 | バージョン管理 |
 | IDE | 任意 | IntelliJ IDEA / Eclipse / VS Code推奨 |
@@ -15,7 +15,7 @@
 
 ```bash
 java -version
-# 出力例: openjdk version "17.0.2" 2022-01-18
+# 出力例: openjdk version "1.8.0_292"
 
 mvn -version
 # 出力例: Apache Maven 3.8.4
@@ -161,14 +161,14 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 
 2. **Java SDKの設定**
    - File > Project Structure > Project
-   - SDK: Java 17を選択
-   - Language Level: 17を選択
+   - SDK: Java 8を選択
+   - Language Level: 8を選択
 
 3. **実行設定**
    - Run > Edit Configurations
    - \+ > Spring Boot
    - Main Class: `com.example.signature.SignatureApplication`
-   - JRE: Java 17
+   - JRE: Java 8
 
 4. **推奨プラグイン**
    - Lombok（将来的な拡張用）
@@ -182,7 +182,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 
 2. **Java SDKの設定**
    - Project > Properties > Java Build Path
-   - Libraries > Add Library > JRE System Library > Java 17
+   - Libraries > Add Library > JRE System Library > Java 8
 
 3. **実行設定**
    - Run > Run Configurations > Spring Boot App
@@ -398,7 +398,7 @@ class SignatureControllerIntegrationTest {
 
 - `controller`: REST APIエンドポイント
 - `service`: ビジネスロジック
-- `model`: データモデル（Record推奨）
+- `model`: データモデル（イミュータブルなPOJO推奨）
 - `config`: 設定クラス
 - `exception`: カスタム例外
 
@@ -415,7 +415,7 @@ class SignatureControllerIntegrationTest {
 
 - インデント: スペース4つ
 - 行の最大長: 120文字
-- Record使用推奨（Java 17以降）
+- イミュータブルなPOJO使用推奨
 - final変数の活用
 - メソッドは1つの責務のみ
 
@@ -444,7 +444,7 @@ public ConversionResult convert(SignatureRequest request) {
 
 #### 1. ビルドエラー: "Java version mismatch"
 
-**原因**: Java 17が使用されていない
+**原因**: Java 8が使用されていない
 
 **解決策**:
 ```bash
@@ -452,7 +452,7 @@ public ConversionResult convert(SignatureRequest request) {
 java -version
 
 # Maven用のJAVA_HOMEを設定
-export JAVA_HOME=/path/to/java17
+export JAVA_HOME=/path/to/java8
 mvn clean install
 ```
 
@@ -497,32 +497,38 @@ mvn test -DargLine="-Xmx1024m"
 
 1. **SignatureConversionService.java の修正**
 
-[src/main/java/com/example/signature/service/SignatureConversionService.java](src/main/java/com/example/signature/service/SignatureConversionService.java:79-86)の`sanitizeFormat`メソッドにフォーマットを追加:
+[signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java](signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java)の`sanitizeFormat`メソッドにフォーマットを追加:
 
 ```java
 private String sanitizeFormat(String format) {
     String normalized = (format == null) ? "png" : format.toLowerCase(Locale.US);
-    return switch (normalized) {
-        case "png" -> "png";
-        case "jpg", "jpeg" -> "jpeg";
-        case "webp" -> "webp";  // 追加
-        default -> throw new SignatureProcessingException("UNSUPPORTED_FORMAT", "Format " + normalized + " is not supported");
-    };
+    if ("png".equals(normalized)) {
+        return "png";
+    } else if ("jpg".equals(normalized) || "jpeg".equals(normalized)) {
+        return "jpeg";
+    } else if ("webp".equals(normalized)) {
+        return "webp";  // 追加
+    } else {
+        throw new SignatureProcessingException("UNSUPPORTED_FORMAT", "Format " + normalized + " is not supported");
+    }
 }
 ```
 
 2. **contentTypeFor メソッドの拡張**
 
-[src/main/java/com/example/signature/service/SignatureConversionService.java](src/main/java/com/example/signature/service/SignatureConversionService.java:100-102)を修正:
+[signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java](signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java)を修正:
 
 ```java
 private String contentTypeFor(String format) {
-    return switch (format) {
-        case "png" -> "image/png";
-        case "jpeg" -> "image/jpeg";
-        case "webp" -> "image/webp";
-        default -> "application/octet-stream";
-    };
+    if ("png".equals(format)) {
+        return "image/png";
+    } else if ("jpeg".equals(format)) {
+        return "image/jpeg";
+    } else if ("webp".equals(format)) {
+        return "image/webp";
+    } else {
+        return "application/octet-stream";
+    }
 }
 ```
 
@@ -615,7 +621,7 @@ nohup java -jar target/signature-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
 
 ```dockerfile
 # Dockerfile
-FROM openjdk:17-jdk-slim
+FROM openjdk:8-jdk-slim
 WORKDIR /app
 COPY target/signature-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
