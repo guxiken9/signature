@@ -41,40 +41,57 @@ mvn clean install
 
 ```
 signature/
-├── pom.xml                                    # Maven設定
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/example/signature/
-│   │   │       ├── SignatureApplication.java         # メインクラス
-│   │   │       ├── controller/                       # コントローラ層
-│   │   │       │   ├── SignatureController.java
-│   │   │       │   └── SignatureExceptionHandler.java
-│   │   │       ├── service/                          # サービス層
-│   │   │       │   └── SignatureConversionService.java
-│   │   │       ├── model/                            # モデル層
-│   │   │       │   ├── ApiError.java
-│   │   │       │   ├── ConversionResult.java
-│   │   │       │   ├── SignatureMetadata.java
-│   │   │       │   ├── SignatureOptions.java
-│   │   │       │   ├── SignatureRequest.java
-│   │   │       │   └── SignatureResponse.java
-│   │   │       ├── config/                           # 設定
-│   │   │       │   └── SignatureProperties.java
-│   │   │       └── exception/                        # 例外
-│   │   │           └── SignatureProcessingException.java
-│   │   └── resources/
-│   │       └── application.properties                # アプリケーション設定
-│   └── test/
-│       └── java/
-│           └── com/example/signature/
-│               └── service/
-│                   └── SignatureConversionServiceTest.java
-├── target/                                            # ビルド出力（自動生成）
-├── README.md                                          # プロジェクト概要
-├── ARCHITECTURE.md                                    # アーキテクチャドキュメント
-├── API.md                                             # API仕様
-└── DEVELOPMENT.md                                     # このファイル
+├── pom.xml                                           # 親POM
+├── signature-core/                                   # 純粋Javaライブラリ（Spring非依存）
+│   ├── pom.xml
+│   └── src/
+│       ├── main/java/com/example/signature/core/
+│       │   ├── service/
+│       │   │   └── SignatureConversionService.java   # 画像処理ロジック
+│       │   ├── model/
+│       │   │   ├── SignatureRequest.java
+│       │   │   ├── SignatureOptions.java
+│       │   │   ├── ConversionResult.java
+│       │   │   └── SignatureMetadata.java
+│       │   ├── config/
+│       │   │   └── SignatureConfig.java              # 設定クラス
+│       │   └── exception/
+│       │       └── SignatureProcessingException.java
+│       └── test/java/
+│           └── com/example/signature/core/service/
+│               └── SignatureConversionServiceTest.java
+├── signature-spring-boot/                            # Spring Boot統合モジュール
+│   ├── pom.xml
+│   └── src/
+│       └── main/java/com/example/signature/spring/
+│           ├── config/
+│           │   ├── SignatureProperties.java          # Spring設定
+│           │   └── SignatureServiceConfiguration.java
+│           ├── controller/
+│           │   ├── SignatureController.java          # REST API
+│           │   └── SignatureExceptionHandler.java
+│           └── model/
+│               ├── SignatureRequestDto.java
+│               ├── SignatureOptionsDto.java
+│               ├── SignatureResponse.java
+│               └── ApiError.java
+├── signature-app/                                    # 実行可能アプリケーション
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/com/example/signature/
+│       │   │   └── SignatureApplication.java         # エントリポイント
+│       │   └── resources/
+│       │       ├── application.properties
+│       │       ├── application-dev.properties
+│       │       └── application-prod.properties
+│       └── test/
+├── target/                                           # ビルド出力（自動生成）
+├── README.md                                         # プロジェクト概要
+├── ARCHITECTURE.md                                   # アーキテクチャドキュメント
+├── API.md                                            # API仕様
+├── DEVELOPMENT.md                                    # このファイル
+└── DOCKER.md                                         # Dockerデプロイメントガイド
 ```
 
 ---

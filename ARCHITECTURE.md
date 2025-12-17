@@ -52,7 +52,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 **役割**: HTTPリクエストの受付とレスポンスの返却
 
 #### SignatureController
-- **場所**: [src/main/java/com/example/signature/controller/SignatureController.java](src/main/java/com/example/signature/controller/SignatureController.java)
+- **場所**: [signature-spring-boot/src/main/java/com/example/signature/spring/controller/SignatureController.java](signature-spring-boot/src/main/java/com/example/signature/spring/controller/SignatureController.java)
 - **責務**:
   - エンドポイント定義 (`POST /api/signatures`)
   - リクエストバリデーション (`@Valid`)
@@ -60,7 +60,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
   - レスポンスDTOへの変換
 
 #### SignatureExceptionHandler
-- **場所**: [src/main/java/com/example/signature/controller/SignatureExceptionHandler.java](src/main/java/com/example/signature/controller/SignatureExceptionHandler.java)
+- **場所**: [signature-spring-boot/src/main/java/com/example/signature/spring/controller/SignatureExceptionHandler.java](signature-spring-boot/src/main/java/com/example/signature/spring/controller/SignatureExceptionHandler.java)
 - **責務**:
   - グローバル例外ハンドリング (`@RestControllerAdvice`)
   - エラーコードからHTTPステータスへのマッピング
@@ -71,7 +71,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 **役割**: ビジネスロジックの実装
 
 #### SignatureConversionService
-- **場所**: [src/main/java/com/example/signature/service/SignatureConversionService.java](src/main/java/com/example/signature/service/SignatureConversionService.java)
+- **場所**: [signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java](signature-core/src/main/java/com/example/signature/core/service/SignatureConversionService.java)
 - **責務**:
   - 画像変換処理の orchestration
   - Base64デコード（Data URL対応）
@@ -79,6 +79,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
   - 透明ピクセルトリミング
   - 背景色適用
   - フォーマット変換
+  - 画像リサイズ（アスペクト比維持）
   - ファイルID生成
 
 **主要メソッド**:
@@ -89,6 +90,8 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 | `decodePayload(String)` | Base64デコードとサイズ検証 |
 | `readImage(byte[])` | バイト配列から画像を読み込み |
 | `trimTransparentPixels(BufferedImage)` | 透明ピクセルのトリミング |
+| `resizeImage(BufferedImage, SignatureOptions)` | 画像のリサイズ（アスペクト比維持） |
+| `calculateDimensions(int, int, Integer, Integer)` | リサイズ後の寸法を計算 |
 | `applyBackground(BufferedImage, String, String)` | 背景色の適用 |
 | `writeImage(BufferedImage, String)` | 画像をバイト配列に変換 |
 | `generateFileId()` | ユニークなファイルIDを生成 |
@@ -100,7 +103,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 すべてのモデルクラスはJava Recordを使用してイミュータブルに実装されています。
 
 #### SignatureRequest
-- **場所**: [src/main/java/com/example/signature/model/SignatureRequest.java](src/main/java/com/example/signature/model/SignatureRequest.java)
+- **場所**: [signature-core/src/main/java/com/example/signature/core/model/SignatureRequest.java](signature-core/src/main/java/com/example/signature/core/model/SignatureRequest.java)
 - **役割**: API入力データ
 - **フィールド**:
   - `mime`: MIMEタイプ（必須）
@@ -109,7 +112,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
   - `options`: 変換オプション（オプショナル）
 
 #### SignatureResponse
-- **場所**: [src/main/java/com/example/signature/model/SignatureResponse.java](src/main/java/com/example/signature/model/SignatureResponse.java)
+- **場所**: [signature-spring-boot/src/main/java/com/example/signature/spring/model/SignatureResponse.java](signature-spring-boot/src/main/java/com/example/signature/spring/model/SignatureResponse.java)
 - **役割**: API出力データ
 - **フィールド**:
   - `fileId`: 生成されたファイルID
@@ -119,15 +122,17 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
   - `height`: 変換後の画像高さ
 
 #### SignatureOptions
-- **場所**: [src/main/java/com/example/signature/model/SignatureOptions.java](src/main/java/com/example/signature/model/SignatureOptions.java)
+- **場所**: [signature-core/src/main/java/com/example/signature/core/model/SignatureOptions.java](signature-core/src/main/java/com/example/signature/core/model/SignatureOptions.java)
 - **役割**: 変換オプションとデフォルト値の解決
 - **フィールド**:
   - `outputFormat`: 出力フォーマット（デフォルト: "png"）
   - `backgroundColor`: 背景色（デフォルト: "#FFFFFF"）
   - `trimTransparent`: トリミング有効化（デフォルト: false）
+  - `width`: リサイズ後の幅（オプショナル）
+  - `height`: リサイズ後の高さ（オプショナル）
 
 #### ConversionResult
-- **場所**: [src/main/java/com/example/signature/model/ConversionResult.java](src/main/java/com/example/signature/model/ConversionResult.java)
+- **場所**: [signature-core/src/main/java/com/example/signature/core/model/ConversionResult.java](signature-core/src/main/java/com/example/signature/core/model/ConversionResult.java)
 - **役割**: サービス層の内部結果
 - **フィールド**:
   - `fileId`: ファイルID
@@ -139,7 +144,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 ### 4. Configuration Layer
 
 #### SignatureProperties
-- **場所**: [src/main/java/com/example/signature/config/SignatureProperties.java](src/main/java/com/example/signature/config/SignatureProperties.java)
+- **場所**: [signature-spring-boot/src/main/java/com/example/signature/spring/config/SignatureProperties.java](signature-spring-boot/src/main/java/com/example/signature/spring/config/SignatureProperties.java)
 - **役割**: アプリケーション設定の外部化
 - **設定項目**:
   - `maxPayloadBytes`: 最大ペイロードサイズ（デフォルト: 2MB）
@@ -147,7 +152,7 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
 ### 5. Exception Layer
 
 #### SignatureProcessingException
-- **場所**: [src/main/java/com/example/signature/exception/SignatureProcessingException.java](src/main/java/com/example/signature/exception/SignatureProcessingException.java)
+- **場所**: [signature-core/src/main/java/com/example/signature/core/exception/SignatureProcessingException.java](signature-core/src/main/java/com/example/signature/core/exception/SignatureProcessingException.java)
 - **役割**: ドメイン固有の例外
 - **エラーコード**:
   - `INVALID_PAYLOAD`: 不正なペイロード（Base64エラー、サイズ超過など）
@@ -178,9 +183,10 @@ Signature APIは、レイヤードアーキテクチャを採用したSpring Boo
    a. decodePayload() - Base64デコード
    b. readImage() - BufferedImageに変換
    c. trimTransparentPixels() - トリミング（オプション）
-   d. applyBackground() - 背景色適用
-   e. writeImage() - フォーマット変換
-   f. generateFileId() - ID生成
+   d. resizeImage() - 画像リサイズ（オプション）
+   e. applyBackground() - 背景色適用
+   f. writeImage() - フォーマット変換
+   g. generateFileId() - ID生成
 
 5. SignatureConversionService → SignatureController
    ConversionResult 返却
