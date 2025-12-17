@@ -5,14 +5,19 @@ FROM maven:3.9-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-# Copy pom.xml first to leverage Docker cache
+# Copy parent pom and module poms first to leverage Docker cache
 COPY pom.xml .
+COPY signature-core/pom.xml signature-core/
+COPY signature-spring-boot/pom.xml signature-spring-boot/
+COPY signature-app/pom.xml signature-app/
 
 # Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN mvn dependency:go-offline -B
+RUN mvn dependency:go-offline -B || true
 
-# Copy source code
-COPY src ./src
+# Copy source code for all modules
+COPY signature-core/src signature-core/src
+COPY signature-spring-boot/src signature-spring-boot/src
+COPY signature-app/src signature-app/src
 
 # Build the application
 RUN mvn clean package -DskipTests -B
@@ -31,8 +36,8 @@ RUN groupadd -g 1001 appuser && \
 
 WORKDIR /app
 
-# Copy the built JAR from builder stage
-COPY --from=builder /app/target/signature-*.jar app.jar
+# Copy the built JAR from builder stage (signature-app module)
+COPY --from=builder /app/signature-app/target/signature-app-*.jar app.jar
 
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app
