@@ -12,9 +12,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -22,7 +22,12 @@ import java.util.regex.Pattern;
 
 public class SignatureConversionService {
     private static final Pattern DATA_URL_PATTERN = Pattern.compile("^data:(.+?);base64,(.+)$");
-    private static final DateTimeFormatter FILE_ID_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss", Locale.US);
+    private static final ThreadLocal<SimpleDateFormat> FILE_ID_FORMATTER = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("yyyyMMddHHmmss", Locale.US);
+        }
+    };
     private final SignatureConfig config;
 
     public SignatureConversionService(SignatureConfig config) {
@@ -32,7 +37,7 @@ public class SignatureConversionService {
     public ConversionResult convert(SignatureRequest request) {
         SignatureOptions options = request.resolvedOptions();
         String targetFormat = sanitizeFormat(options.resolvedOutputFormat());
-        byte[] decoded = decodePayload(request.data());
+        byte[] decoded = decodePayload(request.getData());
         BufferedImage source = readImage(decoded);
 
         BufferedImage processed = source;
@@ -40,7 +45,7 @@ public class SignatureConversionService {
             processed = trimTransparentPixels(processed);
         }
 
-        processed = resizeImage(processed, options.width(), options.height());
+        processed = resizeImage(processed, options.getWidth(), options.getHeight());
 
         processed = applyBackground(processed, options.resolvedBackgroundColor(), targetFormat);
 
@@ -78,15 +83,18 @@ public class SignatureConversionService {
 
     private String sanitizeFormat(String format) {
         String normalized = (format == null) ? "png" : format.toLowerCase(Locale.US);
-        return switch (normalized) {
-            case "png" -> "png";
-            case "jpg", "jpeg" -> "jpeg";
-            default -> throw new SignatureProcessingException("UNSUPPORTED_FORMAT", "Format " + normalized + " is not supported");
-        };
+        if ("png".equals(normalized)) {
+            return "png";
+        } else if ("jpg".equals(normalized) || "jpeg".equals(normalized)) {
+            return "jpeg";
+        } else {
+            throw new SignatureProcessingException("UNSUPPORTED_FORMAT", "Format " + normalized + " is not supported");
+        }
     }
 
     private byte[] writeImage(BufferedImage image, String format) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
             boolean success = ImageIO.write(image, format, baos);
             if (!success) {
                 throw new SignatureProcessingException("UNSUPPORTED_FORMAT", "ImageIO writer for " + format + " not available");
@@ -94,6 +102,12 @@ public class SignatureConversionService {
             return baos.toByteArray();
         } catch (IOException ex) {
             throw new SignatureProcessingException("INTERNAL_ERROR", "Unable to write image", ex);
+        } finally {
+            try {
+                baos.close();
+            } catch (IOException e) {
+                // Ignore
+            }
         }
     }
 
@@ -230,7 +244,7 @@ public class SignatureConversionService {
     }
 
     private String generateFileId() {
-        String timestamp = LocalDateTime.now().format(FILE_ID_FORMATTER);
+        String timestamp = FILE_ID_FORMATTER.get().format(new Date());
         return "sig_" + timestamp + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.signature.core.service;
 
 import com.example.signature.core.config.SignatureConfig;
+import com.example.signature.core.model.ConversionResult;
 import com.example.signature.core.model.SignatureOptions;
 import com.example.signature.core.model.SignatureRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,9 +36,9 @@ class SignatureConversionServiceTest {
                 new SignatureOptions("png", "#FFFFFF", true, null, null)
         );
 
-        var result = service.convert(request);
+        ConversionResult result = service.convert(request);
 
-        assertThat(result.contentType()).isEqualTo("image/png");
+        assertThat(result.getContentType()).isEqualTo("image/png");
         assertThat(result.sizeBytes()).isGreaterThan(0);
     }
 
